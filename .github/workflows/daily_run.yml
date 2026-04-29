@@ -35,11 +35,11 @@ jobs:
     - name: Run Stock Selection
       env:
         TUSHARE_TOKEN: ${{ secrets.TUSHARE_TOKEN }}
-        SMTP_SERVER: "smtp.qq.com"
-        SMTP_PORT: 465
-        SMTP_USER: "pbroe@qq.com"
-        SMTP_PASS: "gzhngacarngvebab"
-        RECEIVER_EMAIL: "pbroe@qq.com"
+        SMTP_SERVER: ${{ secrets.SMTP_SERVER }}
+        SMTP_PORT: ${{ secrets.SMTP_PORT }}
+        SMTP_USER: ${{ secrets.SMTP_USER }}
+        SMTP_PASS: ${{ secrets.SMTP_PASS }}
+        RECEIVER_EMAIL: ${{ secrets.SMTP_USER }}
         DB_PATH: "database/stock_data.db"
         SCREEN_STRATEGIES: "breakout_30"
       run: python main.py
