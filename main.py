@@ -80,11 +80,14 @@ def run_job(target_date: str = None):
                 logger.info(f"Backfill complete. Added {len(to_fetch)} days.")
 
         # 4. 拉取数据 (基础数据、行情、复权因子、日指标)
-        # 获取股票列表 (用于名称映射)
+        # 获取股票列表 (用于名称映射)，仅保留主板
         stock_basic = ts_client.get_stock_basic()
         if stock_basic is None: raise Exception("Failed to fetch stock_basic")
+        stock_basic = stock_basic[stock_basic['market'] == '主板'].copy()
+        logger.info(f"Main board stocks: {len(stock_basic)} (excluded 创业板/科创板/北交所)")
         db.save_df('stock_master', stock_basic, if_exists='replace')
         stock_names = dict(zip(stock_basic['ts_code'], stock_basic['name']))
+        main_board_codes = stock_basic['ts_code'].tolist()
 
         # 拉取行情和复权因子 (至少需要过去 260 天的数据以计算 MA200 和 High60)
         logger.info(f"Fetching daily data from {start_date} to {target_date}...")
@@ -131,6 +134,10 @@ def run_job(target_date: str = None):
 
         # 合并 basic 字段 (换手率) 用于筛选输出
         df_full = pd.merge(df_features, basic_today[['ts_code', 'turnover_rate']], on='ts_code', how='left')
+
+        # 仅保留主板股票
+        df_full = df_full[df_full['ts_code'].isin(main_board_codes)]
+        logger.info(f"After filtering main board: {df_full['ts_code'].nunique()} stocks")
 
         notifier_config = {
             'server': os.getenv("SMTP_SERVER"),
