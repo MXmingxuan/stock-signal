@@ -1,5 +1,6 @@
 import os
 import sys
+import time
 import logging
 import datetime
 from dotenv import load_dotenv
@@ -15,7 +16,8 @@ from src.strategies import StrategyRegistry
 from src.utils.db_utils import Database
 from src.utils.notifier import Notifier
 
-# 配置日志
+# 配置日志（必须先创建 logs/ 目录，否则 FileHandler 会 crash）
+os.makedirs("logs", exist_ok=True)
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -59,6 +61,24 @@ def run_job(target_date: str = None):
     )
 
     try:
+        # 3.5 检查历史数据是否足够，不足则自动回填
+        start_date = (datetime.datetime.strptime(target_date, "%Y%m%d") - datetime.timedelta(days=400)).strftime("%Y%m%d")
+        hist_count = db.execute_query("SELECT COUNT(DISTINCT trade_date) FROM daily_raw").iloc[0, 0]
+        if hist_count < 200:
+            logger.info(f"Historical data insufficient ({hist_count} days), auto-backfilling...")
+            cal = ts_client.get_trade_cal(start_date=start_date, end_date=target_date)
+            if cal is not None and not cal.empty:
+                open_days = sorted(cal[cal['is_open'] == 1]['cal_date'].tolist())
+                existing = db.execute_query("SELECT DISTINCT trade_date FROM daily_raw")['trade_date'].tolist()
+                to_fetch = [d for d in open_days if d not in existing and d != target_date][-250:]
+                for day in to_fetch:
+                    logger.info(f"Backfilling {day}...")
+                    db.save_df('daily_raw', ts_client.get_daily(trade_date=day))
+                    db.save_df('adj_factor', ts_client.get_adj_factor(trade_date=day))
+                    db.save_df('daily_basic', ts_client.get_daily_basic(trade_date=day))
+                    time.sleep(0.3)
+                logger.info(f"Backfill complete. Added {len(to_fetch)} days.")
+
         # 4. 拉取数据 (基础数据、行情、复权因子、日指标)
         # 获取股票列表 (用于名称映射)
         stock_basic = ts_client.get_stock_basic()
@@ -67,12 +87,8 @@ def run_job(target_date: str = None):
         stock_names = dict(zip(stock_basic['ts_code'], stock_basic['name']))
 
         # 拉取行情和复权因子 (至少需要过去 260 天的数据以计算 MA200 和 High60)
-        start_date = (datetime.datetime.strptime(target_date, "%Y%m%d") - datetime.timedelta(days=400)).strftime("%Y%m%d")
-        
         logger.info(f"Fetching daily data from {start_date} to {target_date}...")
-        # 注意：全量拉取全市场 400 天数据非常大，且 Tushare 有流量限制。
-        # v0.1 建议采用增量方式，或者仅针对 target_date 拉取。
-        # 但计算 MA200 需要历史。这里演示直接拉取 target_date，并假设 DB 中已有历史。
+        # 自动回填机制已在上方处理（步骤 3.5），此处只拉取当日数据
         
         daily_today = ts_client.get_daily(trade_date=target_date)
         adj_today = ts_client.get_adj_factor(trade_date=target_date)
