@@ -46,7 +46,7 @@ jobs:
 
     - name: Save Database Cache
       uses: actions/cache/save@v4
-      if: always()
+      if: success()
       with:
         path: database/stock_data.db
         key: stock-db-${{ github.run_id }}
