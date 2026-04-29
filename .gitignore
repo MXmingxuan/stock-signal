@@ -1,0 +1,30 @@
+# 环境变量（含 API Token 和 SMTP 密码）
+.env
+
+# Python 缓存
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# SQLite 数据库
+*.db
+database/*.db
+
+# 日志文件
+logs/
+*.log
+
+# 输出数据（CSV/TXT 在 data/ 下）
+data/*.csv
+data/*.txt
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# 系统
+.DS_Store
+Thumbs.db
