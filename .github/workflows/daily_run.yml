@@ -4,7 +4,7 @@ on:
   schedule:
     # 每天北京时间 17:00 (UTC 09:00) 运行（Tushare 日线数据约 16:00 后更新）
     - cron: '0 9 * * 1-5'
-  workflow_dispatch: # 支持手动触发
+  workflow_dispatch:
 
 jobs:
   run-strategy:
@@ -12,12 +12,12 @@ jobs:
 
     steps:
     - name: Checkout Code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
     - name: Set up Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
-        python-version: '3.9'
+        python-version: '3.11'
 
     - name: Install Dependencies
       run: |
@@ -25,7 +25,7 @@ jobs:
         pip install -r requirements.txt
 
     - name: Restore Database Cache
-      uses: actions/cache@v3
+      uses: actions/cache/restore@v4
       with:
         path: database/stock_data.db
         key: stock-db-${{ github.run_id }}
@@ -45,7 +45,7 @@ jobs:
       run: python main.py
 
     - name: Save Database Cache
-      uses: actions/cache/save@v3
+      uses: actions/cache/save@v4
       if: always()
       with:
         path: database/stock_data.db
