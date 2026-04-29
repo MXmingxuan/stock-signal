@@ -9,6 +9,8 @@ on:
 jobs:
   run-strategy:
     runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
     steps:
     - name: Checkout Code
@@ -24,8 +26,8 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
 
-    - name: Restore Database Cache
-      uses: actions/cache/restore@v4
+    - name: Database Cache
+      uses: actions/cache@v4
       with:
         path: database/stock_data.db
         key: stock-db-${{ github.run_id }}
@@ -44,9 +46,3 @@ jobs:
         SCREEN_STRATEGIES: "breakout_30"
       run: python main.py
 
-    - name: Save Database Cache
-      uses: actions/cache/save@v4
-      if: success()
-      with:
-        path: database/stock_data.db
-        key: stock-db-${{ github.run_id }}
